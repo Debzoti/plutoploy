@@ -1,8 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-
 const app = new Hono();
-
 // Enable CORS
 app.use("/*", cors());
 
@@ -13,6 +11,10 @@ app.get("/", (c) => {
     status: "running",
     runtime: "Bun",
   });
+});
+
+app.get("/health", (c) => {
+  return c.json({ message: "Deployment online :)" });
 });
 
 // Deploy endpoint (placeholder)
