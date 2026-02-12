@@ -20,11 +20,14 @@ app.post("/deploy", (c) => {
   return c.json({ message: "Deploy endpoint - coming soon!" });
 });
 
-// Start server
 const port = 3000;
-console.log(`🚀 Server running on port ${port}`);
 
-export default {
-  port,
-  fetch: app.fetch,
-};
+export function startServer() {
+  Bun.serve({
+    port,
+    fetch: app.fetch,
+  });
+  console.log(`🚀 Server running on port ${port}`);
+}
+
+export { app, port };
