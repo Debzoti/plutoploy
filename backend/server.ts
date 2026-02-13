@@ -5,7 +5,7 @@ const app = new Hono();
 app.use("/*", cors());
 
 // Test endpoint
-app.get("/", (c) => {
+app.get("/index", (c) => {
   return c.json({
     message: "Deployment Platform API (Hono + Bun)",
     status: "running",

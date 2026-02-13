@@ -1,6 +1,6 @@
-FROM docker.io/oven/bun:latest
+FROM docker.io/oven/bun:canary-slim
 
 WORKDIR /app
 COPY . .
-
-RUN bun install & bun run ./index.ts
+RUN bun install
+CMD ["bun", "run", "./index.ts"]
