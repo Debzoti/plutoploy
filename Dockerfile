@@ -1,12 +1,6 @@
-FROM docker.io/oven/bun:latest
+FROM docker.io/oven/bun:canary-slim
 
 WORKDIR /app
-
-# Install deps first for better layer caching
-COPY package.json bun.lock .
-RUN bun install
-
-# Copy the rest of the source
 COPY . .
-
+RUN bun install
 CMD ["bun", "run", "./index.ts"]
