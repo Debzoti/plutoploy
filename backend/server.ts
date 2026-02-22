@@ -1,18 +1,20 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-
 const app = new Hono();
-
 // Enable CORS
 app.use("/*", cors());
 
 // Test endpoint
-app.get("/", (c) => {
+app.get("/index", (c) => {
   return c.json({
     message: "Deployment Platform API (Hono + Bun)",
     status: "running",
     runtime: "Bun",
   });
+});
+
+app.get("/health", (c) => {
+  return c.json({ message: "Deployment online :)" });
 });
 
 // Deploy endpoint (placeholder)
