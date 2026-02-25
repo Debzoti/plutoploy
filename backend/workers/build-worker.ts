@@ -36,7 +36,7 @@ async function buildWorker(repoUrl: string): Promise<void> {
 
 }
 
-const repoUrl = ``
+const repoUrl = `https://github.com/Debzoti/react-jobs.git`
 
 buildWorker(repoUrl)
     .then(() => {
