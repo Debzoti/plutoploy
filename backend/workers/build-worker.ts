@@ -17,10 +17,10 @@ async function buildWorker(repoUrl: string): Promise<void> {
         await execAsync(`git clone --depth 1 ${repoUrl} ${buildDir}`);
 
         //install dependencies
-        await execAsync(` cd ${buildDir} && npm install`);
+        await execAsync(` cd ${buildDir} && bun install`);
 
         //build the app
-        await execAsync(`cd ${buildDir} && npm run build`);
+        await execAsync(`cd ${buildDir} && bun run build`);
 
         //move to deploy dir
         await execAsync(`mkdir -p ${deployDir}`);
