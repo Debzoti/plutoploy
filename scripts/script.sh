@@ -38,6 +38,7 @@ function manage_firewall() {
     firewall-cmd --permanent --add-forward-port=port=443:proto=tcp:toport=8443
     firewall-cmd --permanent --add-forward-port=port=80:proto=tcp:toport=8080
     firewall-cmd --reload
+    systemctl enable --now firewalld
     exit 1
 }
 function check_root() {
@@ -46,21 +47,35 @@ function check_root() {
         sudo su -c "$0"
     fi
 }
-function setup_podlet(){
-
+setup_folders(){
+    mkdir -p ~/.plutoploy
+    echo "export PATH=~/.plutoploy/bin:$PATH" >> ~/.bashrc
+    source ~/.bashrc
+}
+function setup_blobs(){
+    wget "https://github.com/containers/podlet/releases/download/v0.3.1/podlet-x86_64-unknown-linux-musl.tar.xz"
+    wget "https://github.com/GitoxideLabs/gitoxide/releases/download/v0.51.0/gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz"
+    tar -xvf podlet-x86_64-unknown-linux-musl.tar.xz
+    chmod +x podlet
+    mv podlet ~/.local/
+    rm podlet-x86_64-unknown-linux-musl.tar.xz
+    tar -xvf gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz
+    chmod +x gitoxide
+    mv gitoxide ~/.local/
+    rm gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz
 }
 function create_quadlet_service(){
-
+    # podlet create-service --name quadlet --port 8443 --address
+    # will implement this later :)
 }
 function install_on_debian() {
-    apt update -y && apt upgrade -y >> /dev/null  2>&1 
+    apt update -y && apt upgrade -y >> /dev/null  2>&1
     systemctl disable --now ufw >>  /dev/null 2>&1
-    apt uninstall -y ufw 
-    apt install -y wget firewalld fuse-overlayfs slirp4netns podman podman-compose git 
-}
+    apt uninstall -y ufw
+    apt install -y wget firewalld fuse-overlayfs slirp4netns podman podman-compose
 function install_on_redhat() {
     dnf update -y  2>&1
-    dnf install -y wget firewalld podman podman-compose git fuse-overlayfs slirp4netns
+    dnf install -y wget firewalld podman podman-compose fuse-overlayfs slirp4netns
 }
 function os_setup() {
     check_root
@@ -71,9 +86,11 @@ function os_setup() {
     elif [ "$deb" -ge 1 ]; then
         install_on_debian
     else
-        echo "Unsupported OS: RHEL or Debian derivatives are currently supported :(  kindly refer the manual and build :)" 
+        echo "Unsupported OS: RHEL or Debian derivatives are currently supported :(  kindly refer the manual and build :)"
     fi
-    manage_firewall 
+    setup_blobs
+    manage_firewall
     echo "Setup complete! Please reboot your system."
 }
 os_setup
+setup_folders
