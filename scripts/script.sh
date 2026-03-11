@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # currently hardcoded for cloudflare only
-function check_os() {
+check_os() {
     rhel=$(cat /etc/os-release | tr '[:upper:]' '[:lower:]' | (grep -Ec "fedora|centos|rhel|redhat")) >> /dev/null 2>&1
     deb=$(cat /etc/os-release | tr '[:upper:]' '[:lower:]' | (grep -Ec "debian|ubuntu")) >> /dev/null 2>&1
     if [ "$rhel" -ge 1 ]; then
@@ -12,7 +12,7 @@ function check_os() {
         echo "Unsupported OS: RHEL or Debian derivatives are currently supported :( oops"
     fi
 }
-function check_env() {
+check_env() {
     echo "If you wish to change anythig please edit values in ~/bashrc"
     if [ -z "$CLOUDFLARE_EMAIL" ]; then
         read -p "Enter your Cloudflare email: " CLOUDFLARE_EMAIL
@@ -25,7 +25,7 @@ function check_env() {
     fi
     source ~/.bashrc
 }
-function manage_firewall() {
+manage_firewall() {
     systemctl enable --now firewalld
     firewall-cmd --permanent --set-default-zone=block
     firewall-cmd --permanent --add-port=22/tcp
@@ -39,45 +39,48 @@ function manage_firewall() {
     firewall-cmd --permanent --add-forward-port=port=80:proto=tcp:toport=8080
     firewall-cmd --reload
     systemctl enable --now firewalld
-    exit 1
+    loginctl enable-linger $USER 
 }
-function check_root() {
+check_root() {
     if [ "$EUID" -ne 0 ]; then
-        echo "Please run as root"
-        sudo su -c "$0"
+        echo "Please run as root for the first time to setup the environment and install dependencies. after that every thing will be non root :)"
+        sudo su -c "$0" 
     fi
 }
 setup_folders(){
-    mkdir -p ~/.plutoploy
-    echo "export PATH=~/.plutoploy/bin:$PATH" >> ~/.bashrc
+    mkdir -p ~/.plutoploy/bin ~/.local/bin   # our app and all related data will be saved here 
+    echo "export PATH=~/.plutoploy/bin:$PATH" >> ~/.bashrc >> /dev/null 2>&1
+    echo "export PATH=~/.local/bin:$PATH" >> ~/.bashrc >> /dev/null 2>&1
     source ~/.bashrc
+
 }
-function setup_blobs(){
-    wget "https://github.com/containers/podlet/releases/download/v0.3.1/podlet-x86_64-unknown-linux-musl.tar.xz"
-    wget "https://github.com/GitoxideLabs/gitoxide/releases/download/v0.51.0/gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz"
-    tar -xvf podlet-x86_64-unknown-linux-musl.tar.xz
-    chmod +x podlet
-    mv podlet ~/.local/
-    rm podlet-x86_64-unknown-linux-musl.tar.xz
-    tar -xvf gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz
-    chmod +x gitoxide
-    mv gitoxide ~/.local/
-    rm gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz
+setup_blobs(){
+    wget "https://github.com/containers/podlet/releases/download/v0.3.1/podlet-x86_64-unknown-linux-musl.tar.xz" >> /dev/null 2>&1
+    wget "https://github.com/GitoxideLabs/gitoxide/releases/download/v0.51.0/gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz" >> /dev/null 2>&1
+    tar -xvf podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
+    chmod +x podlet 
+    mv podlet ~/.local/ 
+    rm podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
+    tar -xvf gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz >> /dev/null 2>&1
+    chmod +x gitoxide >> /dev/null 2>&1
+    mv gitoxide ~/.local/ >> /dev/null 2>&1
+    rm gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz >> /dev/null 2>&1
 }
-function create_quadlet_service(){
+create_quadlet_service(){
     # podlet create-service --name quadlet --port 8443 --address
     # will implement this later :)
 }
-function install_on_debian() {
+install_on_debian() {
     apt update -y && apt upgrade -y >> /dev/null  2>&1
     systemctl disable --now ufw >>  /dev/null 2>&1
     apt uninstall -y ufw
     apt install -y wget firewalld fuse-overlayfs slirp4netns podman podman-compose
-function install_on_redhat() {
+}
+install_on_redhat() {
     dnf update -y  2>&1
     dnf install -y wget firewalld podman podman-compose fuse-overlayfs slirp4netns
 }
-function os_setup() {
+os_setup() {
     check_root
     check_os
     check_env
