@@ -39,7 +39,7 @@ manage_firewall() {
     firewall-cmd --permanent --add-forward-port=port=80:proto=tcp:toport=8080
     firewall-cmd --reload
     systemctl start firewalld
-    loginctl enable-linger $USER
+    sudo -u "$SUDO_USER" loginctl enable-linger $SUDO_USER
 }
 check_root() {
     if [ "$EUID" -ne 0 ]; then
