@@ -58,12 +58,12 @@ setup_blobs(){
     wget "https://github.com/containers/podlet/releases/download/v0.3.1/podlet-x86_64-unknown-linux-musl.tar.xz" >> /dev/null 2>&1
     wget "https://github.com/GitoxideLabs/gitoxide/releases/download/v0.51.0/gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz" >> /dev/null 2>&1
     tar -xvf podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
-    chmod +x podlet 
-    mv podlet ~/.local/ 
+    chmod +x podlet >> /dev/null 2>&1
+    mv podlet ~/.local/bin/ >> /dev/null 2>&1 
     rm podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
     tar -xvf gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz >> /dev/null 2>&1
     chmod +x gitoxide >> /dev/null 2>&1
-    mv gitoxide ~/.local/ >> /dev/null 2>&1
+    mv gitoxide ~/.local/bin/ >> /dev/null 2>&1
     rm gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz >> /dev/null 2>&1
 }
 create_quadlet_service(){
