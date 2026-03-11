@@ -26,7 +26,7 @@ check_env() {
     source ~/.bashrc
 }
 manage_firewall() {
-    systemctl enable --now firewalld
+    systemctl enable firewalld
     firewall-cmd --permanent --set-default-zone=block
     firewall-cmd --permanent --add-port=22/tcp
     firewall-cmd --permanent --add-port=80/tcp
@@ -38,17 +38,17 @@ manage_firewall() {
     firewall-cmd --permanent --add-forward-port=port=443:proto=tcp:toport=8443
     firewall-cmd --permanent --add-forward-port=port=80:proto=tcp:toport=8080
     firewall-cmd --reload
-    systemctl enable --now firewalld
-    loginctl enable-linger $USER 
+    systemctl start firewalld
+    loginctl enable-linger $USER
 }
 check_root() {
     if [ "$EUID" -ne 0 ]; then
         echo "Please run as root for the first time to setup the environment and install dependencies. after that every thing will be non root :)"
-        sudo su -c "$0" 
+        sudo su -c "$0"
     fi
 }
 setup_folders(){
-    mkdir -p ~/.plutoploy/bin ~/.local/bin   # our app and all related data will be saved here 
+    mkdir -p ~/.plutoploy/bin ~/.local/bin   # our app and all related data will be saved here
     echo "export PATH=~/.plutoploy/bin:$PATH" >> ~/.bashrc >> /dev/null 2>&1
     echo "export PATH=~/.local/bin:$PATH" >> ~/.bashrc >> /dev/null 2>&1
     source ~/.bashrc
@@ -59,7 +59,7 @@ setup_blobs(){
     wget "https://github.com/GitoxideLabs/gitoxide/releases/download/v0.51.0/gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz" >> /dev/null 2>&1
     tar -xvf podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
     chmod +x podlet >> /dev/null 2>&1
-    mv podlet ~/.local/bin/ >> /dev/null 2>&1 
+    mv podlet ~/.local/bin/ >> /dev/null 2>&1
     rm podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
     tar -xvf gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz >> /dev/null 2>&1
     chmod +x gitoxide >> /dev/null 2>&1
