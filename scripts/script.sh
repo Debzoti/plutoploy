@@ -48,7 +48,7 @@ check_root() {
     fi
 }
 setup_folders(){
-    mkdir -p ~/.plutoploy/bin ~/.local/bin   # our app and all related data will be saved here
+    mkdir -p ~/.plutoploy/bin ~/.local/bin  
     echo "export PATH=~/.plutoploy/bin:$PATH" >> ~/.bashrc >> /dev/null 2>&1
     echo "export PATH=~/.local/bin:$PATH" >> ~/.bashrc >> /dev/null 2>&1
     source ~/.bashrc
@@ -56,19 +56,10 @@ setup_folders(){
 }
 setup_blobs(){
     wget "https://github.com/containers/podlet/releases/download/v0.3.1/podlet-x86_64-unknown-linux-musl.tar.xz" >> /dev/null 2>&1
-    wget "https://github.com/GitoxideLabs/gitoxide/releases/download/v0.51.0/gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz" >> /dev/null 2>&1
     tar -xvf podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
     chmod +x podlet >> /dev/null 2>&1
     mv podlet ~/.local/bin/ >> /dev/null 2>&1
     rm podlet-x86_64-unknown-linux-musl.tar.xz >> /dev/null 2>&1
-    tar -xvf gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz >> /dev/null 2>&1
-    chmod +x gitoxide >> /dev/null 2>&1
-    mv gitoxide ~/.local/bin/ >> /dev/null 2>&1
-    rm gitoxide-max-pure-v0.51.0-aarch64-unknown-linux-musl.tar.gz >> /dev/null 2>&1
-}
-create_quadlet_service(){
-    # podlet create-service --name quadlet --port 8443 --address
-    # will implement this later :)
 }
 install_on_debian() {
     apt update -y && apt upgrade -y >> /dev/null  2>&1
