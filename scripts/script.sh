@@ -73,7 +73,7 @@ install_on_redhat() {
 }
 os_setup() {
     check_root
-    check_os
+    apt remove -y ufw
     check_env
     if [ "$rhel" -ge 1 ]; then
         install_on_redhat
