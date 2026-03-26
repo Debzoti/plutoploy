@@ -8,9 +8,14 @@ const docker = new Docker();
 
 
 const portBindings = {
-    '3000/tcp' : [{HostPort : '3000'}],
+    '3000/tcp' : [{HostPort : process.env.HOST_PORT}],
 }
-//pull the image
+
+/**
+ * pull the image via docker by using
+ * @param imageName
+ */
+
 const pullImage = async (imagename : string) : Promise<void> => {
     if(imagename == '') return ;
 
@@ -50,25 +55,23 @@ const pullImage = async (imagename : string) : Promise<void> => {
         
     })
 
-
 }
 
 
-
-
 /**
- * build the cintainer
- * @param repourl
- * @param deployid
+ * create container
+ * @param deployid,
+ * @param imageName,
+ * @param port 
  */
 
-    const createContainer = async (repoUrl : string, imageName: string, buildId : string) : Promise<Docker.Container> =>{
+ const createContainer = async (port : number, imageName: string, deployId : string) : Promise<Docker.Container> =>{
         //habdle repoerl amnndimage name uissues
 
-
+        logger.caller("container started creating")
         const container = await docker.createContainer({
             Image: imageName,
-            name : `build ${buildId}`,
+            name : `deploy-${deployId}`,
             AttachStderr: true,
             AttachStdin: false,
             AttachStdout: true,
@@ -77,8 +80,12 @@ const pullImage = async (imagename : string) : Promise<void> => {
             ExposedPorts: { '80/tcp': {} },
             HostConfig: {
                 PidsLimit:100,
-                PortBindings: portBindings
+                PortBindings: portBindings,
+                RestartPolicy : {
+                    Name: 'unless-stopped'
+                },
                 // for ci cd memory and cpu credentials
+                Memory : 512 * 1024 * 1024
             },
             
         })
