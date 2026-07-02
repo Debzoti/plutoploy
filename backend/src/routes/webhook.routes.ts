@@ -3,36 +3,6 @@ import { buildsDb, deploymentDb } from "../db/database.ts";
 import { createRemoteContainer } from "../services/container.service.ts";
 import { randomUUID, createHmac } from "crypto";
 
-/**
- * Find next available port from database
- */
-async function findAvailablePort(): Promise<number> {
-  const usedPorts = new Set(await deploymentDb.getUsedPorts());
-  let port = 3001;
-
-  // Check if port is actually in use by checking with lsof
-  while (true) {
-    if (!usedPorts.has(port)) {
-      try {
-        // Quick check if port is available
-        const { execSync } = await import("child_process");
-        const result = execSync(
-          `lsof -ti:${port} 2>/dev/null || echo "available"`,
-        )
-          .toString()
-          .trim();
-        if (result === "available") {
-          return port;
-        }
-      } catch {
-        // If lsof fails, assume port is available
-        return port;
-      }
-    }
-    port++;
-  }
-}
-
 const webhookRoutes = new Hono();
 
 webhookRoutes.post("/github", async (c) => {
@@ -106,24 +76,20 @@ webhookRoutes.post("/github", async (c) => {
         const deployId = randomUUID();
 
         try {
-          const port = await findAvailablePort();
-
           const container = await createRemoteContainer({
             image: imageName,
             name: `deploy-${deployId}`,
-            hostPort: port,
-            containerPort: 80,
+            hostPort: 0,
             labels: {
-              "plutoploy.subdomain": subdomain,
-              "plutoploy.repo": repoFullName,
-              "plutoploy.deployId": deployId,
+              "caddy": `${subdomain}.${process.env.DOMAIN || "plutoploy.qzz.io"}`,
+              "caddy.reverse_proxy": `{{upstreams 80}}`,
             },
           });
 
           await deploymentDb.create({
             deployId,
             subdomain,
-            port,
+            port: 0,
             imageName,
             containerId: container.id,
             repo: repoFullName,

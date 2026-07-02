@@ -116,3 +116,25 @@ export async function inspectRemoteContainer(
   }
   return json.data;
 }
+
+/**
+ * Stop + force-remove a container on the remote agent.
+ */
+export async function deleteRemoteContainer(
+  containerId: string,
+): Promise<void> {
+  if (!SERVICE_URL) throw new Error("CONTAINER_SERVICE_URL is not set");
+
+  const res = await fetch(`${SERVICE_URL}/containers/${containerId}`, {
+    method: "DELETE",
+    headers: {
+      ...(SERVICE_TOKEN ? { Authorization: `Bearer ${SERVICE_TOKEN}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Container service DELETE /containers/${containerId} → ${res.status}: ${await res.text()}`,
+    );
+  }
+}
