@@ -156,17 +156,13 @@ githubRoutes.post("/inject-workflow", requireAuth, async (c) => {
     const [owner, project] = repoFullName.split("/");
     const safeName = `${project}-${owner}`.replace(/[^a-z0-9-]/gi, "").toLowerCase();
 
-    const usedPorts = new Set(await deploymentDb.getUsedPorts());
-    let hostPort = 3001;
-    while (usedPorts.has(hostPort)) hostPort++;
-
     await buildsDb.create({
       id: buildId,
       repo: repoFullName.toLowerCase(),
       branch,
       commitSha,
-      hostPort,
       subdomain: safeName,
+      hostPort: containerPort ?? null, // ponytail: reusing hostPort column to store containerPort (the port the app listens on inside the container). Go server handles actual host port allocation now.
     });
 
     console.log(`[Inject] Build ${buildId} created, starting watcher...`);
@@ -324,26 +320,29 @@ function watchBuild(buildId: string, repo: string) {
         const build = await buildsDb.getById(buildId) as any;
         const imageName = `ghcr.io/${repo}:latest`;
         const subdomain = build?.subdomain ?? repo.split("/")[1]?.replace(/[^a-z0-9-]/gi, "").toLowerCase() ?? "app";
-        const port = build?.hostPort ?? 3001;
+        const containerPort = build?.hostPort ?? undefined;
         const containerName = `deploy-${subdomain}`;
         const deployId = randomUUID();
 
-        console.log(`[BuildWatch] Deploying ${imageName} → ${subdomain} on :${port}...`);
+        console.log(`[BuildWatch] Deploying ${imageName} → ${subdomain}...`);
 
         const container = await createRemoteContainer({
           image: imageName,
           name: containerName,
-          hostPort: port,
-          containerPort: port,
-          labels: { hostPort: String(port) },
+          hostPort: 0,
+          containerPort,
+          labels: {
+            "caddy": `${subdomain}.${process.env.DOMAIN || "plutoploy.qzz.io"}`,
+            "caddy.reverse_proxy": `{{upstreams ${containerPort || 80}}}`,
+          },
         });
 
         await deploymentDb.create({
-          deployId, subdomain, port, imageName,
+          deployId, subdomain, port: 0, imageName,
           containerId: container.id, repo,
         });
 
-        console.log(`[BuildWatch] Deployed ${subdomain} on :${port} (${container.id.slice(0, 12)})`);
+        console.log(`[BuildWatch] Deployed ${subdomain} (${container.id.slice(0, 12)})`);
       } catch (err: any) {
         console.error("[BuildWatch] Deploy after build failed:", err);
       }
