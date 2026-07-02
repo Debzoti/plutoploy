@@ -1,0 +1,16 @@
+# ponytail: multi-stage build covers both plain Node servers (Express/Fastify)
+# and TanStack Start / Vinxi apps. Detects .output/ from the build step.
+FROM docker.io/oven/bun:latest AS build
+WORKDIR /app
+COPY . .
+RUN bun install && bun run build
+
+FROM docker.io/library/node:22-alpine
+WORKDIR /app
+# Copy everything — the build output (.output/ for Vinxi, dist/ for others)
+# plus node_modules and package.json for runtime deps.
+COPY --from=build /app .
+EXPOSE 3000
+# ponytail: Vinxi/TanStack Start outputs to .output/server/index.mjs.
+# Plain Node apps use index.js. Shell picks whichever exists.
+CMD ["sh", "-c", "if [ -f .output/server/index.mjs ]; then node .output/server/index.mjs; else node index.js; fi"]

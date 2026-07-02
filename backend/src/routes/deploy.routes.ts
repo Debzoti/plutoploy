@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { deployApp } from '../services/deployment.service';
 import { removeDeployment } from '../handlers/caddy.handler';
+import { listRemoteContainers, inspectRemoteContainer } from '../services/container.service';
 import { randomUUID } from 'crypto';
 import { deploymentDb, routesDb } from '../db/database';
 import { requireAuth, type AuthEnv } from '../middleware/auth.middleware';
@@ -166,6 +167,39 @@ deployRoutes.delete('/deployments/:id', requireAuth, async (c) => {
             error: error.message 
         }, 500);
     }
+});
+
+/**
+ * List containers belonging to the authenticated user.
+ * ?all=true includes stopped containers.
+ */
+deployRoutes.get('/containers', requireAuth, async (c) => {
+    const { login } = c.get('user');
+    const all = c.req.query('all') === 'true';
+
+    const deployments = await deploymentDb.getByLogin(login);
+    const userContainerIds = new Set(deployments.map((d) => d.containerId));
+
+    const containers = await listRemoteContainers(all);
+    const filtered = containers.filter((ct: any) => userContainerIds.has(ct.id));
+
+    return c.json({ data: filtered, count: filtered.length });
+});
+
+/**
+ * Inspect a single container (must belong to the authenticated user).
+ */
+deployRoutes.get('/containers/:id', requireAuth, async (c) => {
+    const { login } = c.get('user');
+    const containerId = c.req.param('id');
+
+    const deployments = await deploymentDb.getByLogin(login);
+    if (!deployments.some((d) => d.containerId === containerId)) {
+        return c.json({ error: 'Container not found' }, 404);
+    }
+
+    const data = await inspectRemoteContainer(containerId);
+    return c.json({ data });
 });
 
 /**

@@ -467,7 +467,7 @@ export function planInjectFiles<
  */
 export async function injectWorkflowToRepo(
   repoFullName: string,
-  runtime: "node" | "python",
+  runtime: "react" | "node-server" | "python" | "go",
   branch: string,
   installationToken: string,
 ): Promise<{ commitSha: string; written: string[]; skipped: string[] }> {
@@ -480,16 +480,25 @@ export async function injectWorkflowToRepo(
   const readTemplate = (subPath: string) =>
     fs.readFileSync(path.join(templatesPath, subPath), "utf-8");
 
-  let workflowContent = readTemplate(
-    runtime === "node" ? "workflows/node.yml" : "workflows/python.yml",
-  );
+  const workflowMap: Record<string, string> = {
+    react: "workflows/react.yml",
+    "node-server": "workflows/node-server.yml",
+    python: "workflows/python.yml",
+    go: "workflows/go.yml",
+  };
+  const dockerfileMap: Record<string, string> = {
+    react: "docker/Dockerfile.react",
+    "node-server": "docker/Dockerfile.node-server",
+    python: "docker/Dockerfile.python",
+    go: "docker/Dockerfile.go",
+  };
+
+  let workflowContent = readTemplate(workflowMap[runtime]!);
   workflowContent = workflowContent.replace(
     /branches: \["main"\]/g,
     `branches: ["${branch}"]`,
   );
-  const dockerfileContent = readTemplate(
-    runtime === "node" ? "docker/Dockerfile.node" : "docker/Dockerfile.python",
-  );
+  const dockerfileContent = readTemplate(dockerfileMap[runtime]!);
   const dockerIgnoreContent = readTemplate("docker/.dockerignore");
 
   // build.yml is ours → always overwrite (keeps re-injects current). The two user
