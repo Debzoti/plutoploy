@@ -26,9 +26,10 @@ export async function createRemoteContainer(
 ): Promise<{ id: string; warnings: string[] }> {
   if (!SERVICE_URL) throw new Error("CONTAINER_SERVICE_URL is not set");
 
-  // ponytail: minimal body for now — Go service only accepts `image`. Add port/name/labels when Go supports them.
-  const body = {
+  const body: Record<string, unknown> = {
     image: input.image,
+    ...(input.name ? { name: input.name } : {}),
+    ...(input.labels ? { labels: input.labels } : {}),
   };
 
   const res = await fetch(`${SERVICE_URL}/containers`, {
@@ -58,4 +59,60 @@ export async function createRemoteContainer(
     );
   }
   return { id: json.data.id, warnings: json.data.warnings ?? [] };
+}
+
+/**
+ * List containers from the remote agent, optionally including stopped ones.
+ */
+export async function listRemoteContainers(
+  all = false,
+): Promise<Record<string, unknown>[]> {
+  if (!SERVICE_URL) throw new Error("CONTAINER_SERVICE_URL is not set");
+
+  const url = `${SERVICE_URL}/containers${all ? "?all=true" : ""}`;
+  const res = await fetch(url, {
+    headers: {
+      ...(SERVICE_TOKEN ? { Authorization: `Bearer ${SERVICE_TOKEN}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Container service GET /containers → ${res.status}: ${await res.text()}`,
+    );
+  }
+
+  const json = (await res.json()) as {
+    ok?: boolean;
+    data?: Record<string, unknown>[];
+  };
+  // ponytail: assumes Go server returns { ok, data: [...] }. Adjust if shape differs.
+  return json.data ?? [];
+}
+
+/**
+ * Inspect a single container on the remote agent.
+ */
+export async function inspectRemoteContainer(
+  containerId: string,
+): Promise<Record<string, unknown>> {
+  if (!SERVICE_URL) throw new Error("CONTAINER_SERVICE_URL is not set");
+
+  const res = await fetch(`${SERVICE_URL}/containers/${containerId}`, {
+    headers: {
+      ...(SERVICE_TOKEN ? { Authorization: `Bearer ${SERVICE_TOKEN}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Container service GET /containers/${containerId} → ${res.status}: ${await res.text()}`,
+    );
+  }
+
+  const json = (await res.json()) as { ok?: boolean; data?: Record<string, unknown> };
+  if (!json.ok || !json.data) {
+    throw new Error(`Container service returned unexpected payload: ${JSON.stringify(json)}`);
+  }
+  return json.data;
 }

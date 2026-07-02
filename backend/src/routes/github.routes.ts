@@ -109,7 +109,7 @@ githubRoutes.post("/inject-workflow", requireAuth, async (c) => {
     return c.json({ error: "Invalid request body" }, 400);
   }
 
-  const { repoFullName, runtime, branch } = body;
+  const { repoFullName, runtime, branch, port: containerPort } = body;
 
   if (!repoFullName || !runtime || !branch) {
     return c.json(
@@ -120,10 +120,10 @@ githubRoutes.post("/inject-workflow", requireAuth, async (c) => {
     );
   }
 
-  if (!["node", "python"].includes(runtime)) {
+  if (!["react", "node-server", "python", "go"].includes(runtime)) {
     return c.json(
       {
-        error: 'Invalid runtime. Must be "node" or "python"',
+        error: 'Invalid runtime. Must be "react", "node-server", "python", or "go"',
       },
       400,
     );
@@ -145,18 +145,28 @@ githubRoutes.post("/inject-workflow", requireAuth, async (c) => {
 
     const { commitSha } = await injectWorkflowToRepo(
       repoFullName,
-      runtime as "node" | "python", // need to change here
+      runtime as "react" | "node-server" | "python" | "go",
       branch,
       installationToken,
     );
 
     const buildId = randomUUID();
 
+    // Parse "owner/repo" → subdomain "repo-owner"
+    const [owner, project] = repoFullName.split("/");
+    const safeName = `${project}-${owner}`.replace(/[^a-z0-9-]/gi, "").toLowerCase();
+
+    const usedPorts = new Set(await deploymentDb.getUsedPorts());
+    let hostPort = 3001;
+    while (usedPorts.has(hostPort)) hostPort++;
+
     await buildsDb.create({
       id: buildId,
       repo: repoFullName.toLowerCase(),
       branch,
       commitSha,
+      hostPort,
+      subdomain: safeName,
     });
 
     console.log(`[Inject] Build ${buildId} created, starting watcher...`);
@@ -311,22 +321,21 @@ function watchBuild(buildId: string, repo: string) {
 
     if (r.success) {
       try {
+        const build = await buildsDb.getById(buildId) as any;
         const imageName = `ghcr.io/${repo}:latest`;
-        const safeName = repo.split("/")[1]?.replace(/[^a-z0-9-]/gi, "").toLowerCase() ?? "app";
-        const subdomain = `${safeName}-${Math.random().toString(36).substring(2, 6)}`;
+        const subdomain = build?.subdomain ?? repo.split("/")[1]?.replace(/[^a-z0-9-]/gi, "").toLowerCase() ?? "app";
+        const port = build?.hostPort ?? 3001;
+        const containerName = `deploy-${subdomain}`;
         const deployId = randomUUID();
-
-        const usedPorts = new Set(await deploymentDb.getUsedPorts());
-        let port = 3001;
-        while (usedPorts.has(port)) port++;
 
         console.log(`[BuildWatch] Deploying ${imageName} → ${subdomain} on :${port}...`);
 
         const container = await createRemoteContainer({
           image: imageName,
-          name: `deploy-${deployId}`,
+          name: containerName,
           hostPort: port,
-          containerPort: 80,
+          containerPort: port,
+          labels: { hostPort: String(port) },
         });
 
         await deploymentDb.create({
